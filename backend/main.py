@@ -17,6 +17,7 @@ reset to zero and never actually cap anything.
 
 from __future__ import annotations
 
+import os
 from typing import Optional
 
 import pandas as pd
@@ -28,7 +29,14 @@ from src.explain import top_reasons
 from src.model import ReturnRiskModel
 from src.policy import VALID_ACTIONS, DecisionPolicy
 
-MODEL_PATH = "models/xgboost_model.joblib"
+# Which dataset's model to serve. Set RETURNGUARD_DATASET=real to serve
+# the Olist-trained model; anything else (or unset) serves synthetic.
+DATASET = os.environ.get("RETURNGUARD_DATASET", "synthetic").strip().lower()
+if DATASET not in ("synthetic", "real"):
+    raise RuntimeError(
+        f"RETURNGUARD_DATASET must be 'synthetic' or 'real', got {DATASET!r}"
+    )
+MODEL_PATH = f"models/xgboost_model_{DATASET}.joblib"
 
 app = FastAPI(title="ReturnGuard Agent")
 
@@ -46,7 +54,9 @@ class OrderRequest(BaseModel):
     order_amount: float
     category: str
     item_count: int
-    discount_pct: float
+    # discount_pct does not exist in the Olist real dataset - optional so
+    # a real-schema request can omit it (it is imputed away server-side).
+    discount_pct: Optional[float] = None
     payment_method: str
     is_new_customer: bool
     customer_prior_return_rate: Optional[float] = None
@@ -72,8 +82,11 @@ class OverrideRequest(BaseModel):
 
 @app.get("/health")
 def health():
-    """Trivial liveness check - hit this first to confirm the server is up."""
-    return {"status": "ok"}
+    """Trivial liveness check - hit this first to confirm the server is up.
+
+    Also reports which dataset's model this backend is serving, so the
+    dashboard can show it."""
+    return {"status": "ok", "dataset": DATASET, "model_path": MODEL_PATH}
 
 
 @app.post("/score", response_model=ScoreResponse)

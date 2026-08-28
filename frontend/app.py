@@ -33,6 +33,23 @@ st.caption("Return-risk scoring with a bounded, auditable decision layer.")
 if "scored_orders" not in st.session_state:
     st.session_state.scored_orders = []  # list of dicts, most recent first
 
+def backend_health():
+    try:
+        r = requests.get(f"{API_BASE_URL}/health", timeout=5)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.RequestException:
+        return None
+
+
+_health = backend_health()
+if _health and _health.get("dataset"):
+    st.sidebar.success(f"Backend dataset: **{_health['dataset']}**")
+elif _health:
+    st.sidebar.info("Backend connected (dataset unknown - older backend)")
+else:
+    st.sidebar.error(f"Backend unreachable at {API_BASE_URL}")
+
 page = st.sidebar.radio("View", ["Score & Queue", "Metrics"])
 
 CATEGORIES = ["apparel", "electronics", "home", "beauty", "footwear"]

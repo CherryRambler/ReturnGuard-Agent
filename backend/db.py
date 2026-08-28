@@ -87,7 +87,7 @@ def insert_scored_order(conn: sqlite3.Connection, order: dict, risk_score: float
             order["order_amount"],
             order["category"],
             order["item_count"],
-            order["discount_pct"],
+            order.get("discount_pct"),
             order["payment_method"],
             int(order["is_new_customer"]),
             order.get("customer_prior_return_rate"),

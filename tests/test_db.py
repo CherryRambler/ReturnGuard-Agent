@@ -41,6 +41,31 @@ SAMPLE_ORDER = {
     "review_score_avg": 3.2,
 }
 
+# Real (Olist) schema: no discount_pct key at all, Olist category slug,
+# payment_method "card". The DB layer must persist it without a KeyError.
+SAMPLE_ORDER_REAL = {
+    "order_id": "order-real-001",
+    "order_amount": 189.9,
+    "category": "bed_bath_table",
+    "item_count": 1,
+    "payment_method": "card",
+    "is_new_customer": True,
+    "customer_prior_return_rate": None,
+    "days_since_signup": 0,
+    "delivery_pincode_risk_tier": "medium",
+    "size_flag": False,
+    "review_score_avg": None,
+}
+
+
+def test_insert_real_schema_order_without_discount_pct(conn):
+    db.insert_scored_order(conn, SAMPLE_ORDER_REAL, risk_score=0.21, action_taken="flag_for_review")
+    rows = db.get_recent_scored_orders(conn)
+    assert len(rows) == 1
+    assert rows[0]["order_id"] == "order-real-001"
+    assert rows[0]["discount_pct"] is None
+    assert rows[0]["action_taken"] == "flag_for_review"
+
 
 def test_insert_and_read_back_scored_order(conn):
     db.insert_scored_order(conn, SAMPLE_ORDER, risk_score=0.78, action_taken="restrict_cod")

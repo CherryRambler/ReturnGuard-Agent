@@ -60,13 +60,14 @@ class ReturnRiskModel:
     raw_classifier: Optional[object] = None  # the plain XGBoost model, kept for SHAP - see explain.py
     allow_threshold: float = 0.35
     restrict_threshold: float = 0.65
+    dataset: str = "synthetic"  # which column preset this model was trained on
 
     def fit(self, train_df: pd.DataFrame, **xgb_param_overrides) -> "ReturnRiskModel":
         """Fit the feature pipeline AND the classifier on train_df only.
         Never call this with val or test data."""
-        X_train, y_train = split_features_and_label(train_df)
+        X_train, y_train = split_features_and_label(train_df, self.dataset)
 
-        self.feature_pipeline = build_feature_pipeline()
+        self.feature_pipeline = build_feature_pipeline(self.dataset)
         X_train_transformed = self.feature_pipeline.fit_transform(X_train)
 
         # Returns are the minority class (~38% of orders) - without this,
@@ -93,7 +94,7 @@ class ReturnRiskModel:
         ever call this with val.csv - never train.csv, never test.csv."""
         if self.feature_pipeline is None or self.classifier is None:
             raise RuntimeError("Fit the model before calibrating it.")
-        X_val, y_val = split_features_and_label(val_df)
+        X_val, y_val = split_features_and_label(val_df, self.dataset)
         X_val_transformed = self.feature_pipeline.transform(X_val)
         calibrated = _wrap_prefit_for_calibration(self.classifier, method)
         calibrated.fit(X_val_transformed, y_val)
@@ -109,7 +110,7 @@ class ReturnRiskModel:
         """Return risk_score (probability of was_returned=True) per row."""
         if self.feature_pipeline is None or self.classifier is None:
             raise RuntimeError("Model is not fitted or loaded yet. Call fit() or load() first.")
-        X, _ = split_features_and_label(df)
+        X, _ = split_features_and_label(df, self.dataset)
         X_transformed = self.feature_pipeline.transform(X)
         return self.classifier.predict_proba(X_transformed)[:, 1]
 
@@ -126,6 +127,7 @@ class ReturnRiskModel:
                 "raw_classifier": self.raw_classifier,
                 "allow_threshold": self.allow_threshold,
                 "restrict_threshold": self.restrict_threshold,
+                "dataset": self.dataset,
             },
             path,
         )
@@ -139,4 +141,5 @@ class ReturnRiskModel:
             raw_classifier=artifact.get("raw_classifier"),
             allow_threshold=artifact.get("allow_threshold", 0.35),
             restrict_threshold=artifact.get("restrict_threshold", 0.65),
+            dataset=artifact.get("dataset", "synthetic"),
         )

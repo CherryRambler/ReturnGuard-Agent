@@ -24,7 +24,9 @@ import argparse
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compute the agent's human-override trust rate")
     parser.add_argument("--sample-size", type=int, default=50)
-    parser.add_argument("--out", type=str, default="evaluation/eval_report.md")
+    parser.add_argument("--dataset", choices=["synthetic", "real"], default="synthetic")
+    parser.add_argument("--out", type=str, default=None,
+                        help="defaults to evaluation/eval_report_<dataset>.md")
     args = parser.parse_args()
 
     raise NotImplementedError("Implement per the module docstring on Day 11 - this one is manual-review-driven.")

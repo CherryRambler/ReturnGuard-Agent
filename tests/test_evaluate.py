@@ -1,9 +1,9 @@
 """
 Tests for evaluation/evaluate.py.
 
-Skips if no trained model exists yet. Only checks the SCRIPT runs and
-produces a sensibly-shaped report - it does NOT assert specific metric
-values, since those legitimately vary run to run.
+Skips per-dataset if that model doesn't exist. Only checks the SCRIPT
+runs and produces a sensibly-shaped report - it does NOT assert specific
+metric values, since those legitimately vary run to run.
 """
 
 import os
@@ -12,14 +12,21 @@ import sys
 
 import pytest
 
-MODEL_PATH = "models/xgboost_model.joblib"
 
+@pytest.mark.parametrize(
+    "dataset, model_path",
+    [
+        ("synthetic", "models/xgboost_model_synthetic.joblib"),
+        ("real", "models/xgboost_model_real.joblib"),
+    ],
+)
+def test_evaluate_script_runs_and_writes_report(dataset, model_path, tmp_path):
+    if not os.path.exists(model_path):
+        pytest.skip(f"Run `python -m scripts.train --dataset {dataset}` first.")
 
-@pytest.mark.skipif(not os.path.exists(MODEL_PATH), reason="Run scripts/train.py first.")
-def test_evaluate_script_runs_and_writes_report(tmp_path):
-    out_path = tmp_path / "eval_report.md"
+    out_path = tmp_path / f"eval_report_{dataset}.md"
     result = subprocess.run(
-        [sys.executable, "-m", "evaluation.evaluate", "--out", str(out_path)],
+        [sys.executable, "-m", "evaluation.evaluate", "--dataset", dataset, "--out", str(out_path)],
         capture_output=True,
         text=True,
     )
@@ -31,3 +38,4 @@ def test_evaluate_script_runs_and_writes_report(tmp_path):
     assert "Recall" in content
     assert "Confusion matrix" in content
     assert "Net value" in content
+    assert dataset in content

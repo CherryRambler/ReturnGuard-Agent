@@ -32,7 +32,7 @@ def top_reasons(model: ReturnRiskModel, order_row: pd.DataFrame, n: int = 3) -> 
             "updated src/model.py so fit() captures it before calibration."
         )
 
-    X, _ = split_features_and_label(order_row)
+    X, _ = split_features_and_label(order_row, getattr(model, "dataset", "synthetic"))
     X_transformed = model.feature_pipeline.transform(X)
 
     explainer = shap.TreeExplainer(model.raw_classifier)

@@ -28,6 +28,22 @@ returnguard.db
 *.sqlite
 *.sqlite3
 
+# Raw Kaggle Olist CSVs (~62MB) - download once, see README "Real (Olist)
+# data path". Not committed to keep the repo lean.
+data/olist_raw/*.csv
+
+# Real-data adapter output - regenerate with:
+#   python -m scripts.prepare_real_data --raw-dir data/olist_raw --out-dir data/real
+# (data/synthetic/ IS committed, since its generator is seeded + fast and
+#  the synthetic numbers are the headline results.)
+data/real/*.csv
+
+# The real-data model + report are regenerable from the (un-committed)
+# raw CSVs. The synthetic model + report stay committed, matching how
+# the single-model project tracked them before the split.
+models/xgboost_model_real.joblib
+evaluation/eval_report_real.md
+
 # Editor / IDE
 .vscode/
 .idea/

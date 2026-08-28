@@ -30,13 +30,19 @@ COST_PER_FALSE_NEGATIVE = 250  # INR - avg loss from a missed return (shipping +
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate the trained model on the held-out test set")
-    parser.add_argument("--data-dir", type=str, default="data")
-    parser.add_argument("--model", type=str, default="models/xgboost_model.joblib")
-    parser.add_argument("--out", type=str, default="evaluation/eval_report.md")
+    parser.add_argument("--dataset", choices=["synthetic", "real"], default="synthetic")
+    parser.add_argument("--data-dir", type=str, default=None)
+    parser.add_argument("--model", type=str, default=None)
+    parser.add_argument("--out", type=str, default=None)
     args = parser.parse_args()
 
-    model = ReturnRiskModel.load(args.model)
-    test_df = load_split(f"{args.data_dir}/test.csv")
+    dataset = args.dataset
+    data_dir = args.data_dir or f"data/{dataset}"
+    model_path = args.model or f"models/xgboost_model_{dataset}.joblib"
+    out_path = args.out or f"evaluation/eval_report_{dataset}.md"
+
+    model = ReturnRiskModel.load(model_path)
+    test_df = load_split(f"{data_dir}/test.csv")
     y_test = test_df["was_returned"]
 
     scores = model.predict_proba(test_df)
@@ -60,9 +66,11 @@ def main() -> None:
     action_counts = pd.Series(actions).value_counts()
 
     lines = [
-        "# ReturnGuard Agent - Held-Out Test Evaluation",
+        f"# ReturnGuard Agent - Held-Out Test Evaluation ({dataset})",
         "",
-        f"Evaluated on data/test.csv ({len(test_df)} orders) - the first and only time this file has been used.",
+        f"Dataset: **{dataset}**",
+        "",
+        f"Evaluated on {data_dir}/test.csv ({len(test_df)} orders).",
         "",
         "## Classifier metrics",
         "",
@@ -101,12 +109,12 @@ def main() -> None:
 
     report_text = "\n".join(lines)
 
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    with open(args.out, "w") as f:
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    with open(out_path, "w") as f:
         f.write(report_text)
 
     print(report_text)
-    print(f"\nSaved to {args.out}")
+    print(f"\nSaved to {out_path}")
 
 
 if __name__ == "__main__":

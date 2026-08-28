@@ -17,6 +17,17 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder, StandardScaler
 
+DATASETS = ("synthetic", "real")
+
+# Both datasets share ONE unified column schema (approach (b) in the
+# real-data adapter spec): discount_pct is always present as a column.
+# For synthetic data it carries real generated values; for real (Olist)
+# data it is all-NaN and gets imputed away, so it contributes no signal -
+# a dead feature rather than an invented one. Keeping the schema identical
+# means model.py, backend/main.py, and the DB layer need zero
+# per-dataset branching. The SYNTHETIC_* / REAL_* aliases below exist so
+# call sites can be explicit about which dataset they're operating on
+# even though the lists are currently the same.
 CATEGORICAL_COLUMNS = ["category", "payment_method", "delivery_pincode_risk_tier"]
 NUMERIC_COLUMNS = [
     "order_amount",
@@ -32,6 +43,26 @@ LABEL_COLUMN = "was_returned"
 NON_FEATURE_COLUMNS = ["order_id", "order_date", "customer_id", LABEL_COLUMN, "action_taken"]
 
 ALL_FEATURE_COLUMNS = CATEGORICAL_COLUMNS + NUMERIC_COLUMNS + BOOLEAN_COLUMNS
+
+# Named per-dataset presets. Identical today (unified schema), but every
+# function that selects columns goes through _columns_for(dataset) so a
+# future divergence is a one-line change here, not a codebase-wide hunt.
+SYNTHETIC_CATEGORICAL_COLUMNS = list(CATEGORICAL_COLUMNS)
+SYNTHETIC_NUMERIC_COLUMNS = list(NUMERIC_COLUMNS)
+SYNTHETIC_BOOLEAN_COLUMNS = list(BOOLEAN_COLUMNS)
+
+REAL_CATEGORICAL_COLUMNS = list(CATEGORICAL_COLUMNS)
+REAL_NUMERIC_COLUMNS = list(NUMERIC_COLUMNS)
+REAL_BOOLEAN_COLUMNS = list(BOOLEAN_COLUMNS)
+
+
+def _columns_for(dataset: str):
+    """Return (categorical, numeric, boolean) column lists for a dataset."""
+    if dataset == "synthetic":
+        return SYNTHETIC_CATEGORICAL_COLUMNS, SYNTHETIC_NUMERIC_COLUMNS, SYNTHETIC_BOOLEAN_COLUMNS
+    if dataset == "real":
+        return REAL_CATEGORICAL_COLUMNS, REAL_NUMERIC_COLUMNS, REAL_BOOLEAN_COLUMNS
+    raise ValueError(f"dataset must be one of {DATASETS}, got {dataset!r}")
 
 
 def _engineer_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -54,13 +85,18 @@ def _to_int(X):
     return X.astype(int)
 
 
-def build_feature_pipeline() -> ColumnTransformer:
-    """Return an UNFITTED ColumnTransformer.
+def build_feature_pipeline(dataset: str = "synthetic") -> ColumnTransformer:
+    """Return an UNFITTED ColumnTransformer for the given dataset.
 
     categorical -> impute missing with most-frequent, then one-hot encode
     numeric     -> impute missing with the median, then standard-scale
     boolean     -> cast to 0/1 int, passed through unscaled
+
+    `dataset` selects the column preset ("synthetic" or "real"). With the
+    unified schema the two presets are identical, but routing through it
+    keeps the door open for a real-only schema later.
     """
+    categorical_columns, numeric_columns, boolean_columns = _columns_for(dataset)
     categorical_pipeline = Pipeline(
         steps=[
             ("impute", SimpleImputer(strategy="most_frequent")),
@@ -81,9 +117,9 @@ def build_feature_pipeline() -> ColumnTransformer:
 
     return ColumnTransformer(
         transformers=[
-            ("categorical", categorical_pipeline, CATEGORICAL_COLUMNS),
-            ("numeric", numeric_pipeline, NUMERIC_COLUMNS),
-            ("boolean", boolean_pipeline, BOOLEAN_COLUMNS),
+            ("categorical", categorical_pipeline, categorical_columns),
+            ("numeric", numeric_pipeline, numeric_columns),
+            ("boolean", boolean_pipeline, boolean_columns),
         ],
         remainder="drop",
     )
@@ -95,12 +131,29 @@ def load_split(path: str) -> pd.DataFrame:
     return pd.read_csv(path, parse_dates=["order_date"])
 
 
-def split_features_and_label(df: pd.DataFrame):
+def feature_columns_for(dataset: str = "synthetic") -> list[str]:
+    """The full ordered feature-column list for a dataset (categorical +
+    numeric + boolean, including engineered columns like
+    has_return_history)."""
+    categorical_columns, numeric_columns, boolean_columns = _columns_for(dataset)
+    return categorical_columns + numeric_columns + boolean_columns
+
+
+def split_features_and_label(df: pd.DataFrame, dataset: str = "synthetic"):
     """Return (X, y). X is the raw column subset the pipeline expects
     (after engineered features are added); y is the boolean label, or
     None if the dataframe has no label column (e.g. a live inference
-    request)."""
+    request).
+
+    `dataset` selects the column preset. If the frame is missing a column
+    the preset expects (e.g. real-data CSVs written without discount_pct),
+    it is added as all-NaN so the imputer handles it uniformly."""
     df = _engineer_features(df)
-    X = df[ALL_FEATURE_COLUMNS]
+    wanted = feature_columns_for(dataset)
+    df = df.copy()
+    for col in wanted:
+        if col not in df.columns:
+            df[col] = float("nan")
+    X = df[wanted]
     y = df[LABEL_COLUMN] if LABEL_COLUMN in df.columns else None
     return X, y

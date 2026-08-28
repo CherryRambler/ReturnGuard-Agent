@@ -1,32 +1,34 @@
-# ReturnGuard Agent - Held-Out Test Evaluation
+# ReturnGuard Agent - Held-Out Test Evaluation (synthetic)
 
-Evaluated on data/test.csv (773 orders) - the first and only time this file has been used.
+Dataset: **synthetic**
+
+Evaluated on data/synthetic/test.csv (773 orders).
 
 ## Classifier metrics
 
-- Precision: 0.479
-- Recall: 0.619
-- F1: 0.540
-- ROC-AUC: 0.671
-- PR-AUC: 0.508
+- Precision: 0.489
+- Recall: 0.644
+- F1: 0.556
+- ROC-AUC: 0.677
+- PR-AUC: 0.530
 
 ## Confusion matrix
 
 |                    | Predicted: no return | Predicted: return |
 |--------------------|-----------------------|--------------------|
 | Actual: no return  | 321 (TN) | 182 (FP) |
-| Actual: return     | 103 (FN) | 167 (TP) |
+| Actual: return     | 96 (FN) | 174 (TP) |
 
 ## Cost analysis (INR)
 
 - False-positive cost: 182 x 50 = 9,100
-- False-negative cost: 103 x 250 = 25,750
-- Net value (value of returns caught minus false-positive friction): 32,650
+- False-negative cost: 96 x 250 = 24,000
+- Net value (value of returns caught minus false-positive friction): 34,400
 
 ## Agent action distribution (using the tuned policy)
 
-- allow: 424 (54.9%)
-- flag_for_review: 329 (42.6%)
+- allow: 417 (53.9%)
+- flag_for_review: 336 (43.5%)
 - restrict_cod: 20 (2.6%)
 
 ## Thresholds used

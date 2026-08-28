@@ -12,7 +12,7 @@ See: razorpay_buildathon_plan.md, Section 7 (Dataset Design) for the
 full column spec and design rationale.
 
 Usage:
-    python scripts/generate_data.py --n-rows 5000 --seed 42 --out-dir data
+    python scripts/generate_data.py --n-rows 5000 --seed 42 --out-dir data/synthetic
 """
 
 from __future__ import annotations
@@ -190,7 +190,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--start-date", type=str, default="2026-01-01")
     parser.add_argument("--n-days", type=int, default=240)
-    parser.add_argument("--out-dir", type=str, default="data")
+    parser.add_argument("--out-dir", type=str, default="data/synthetic")
     args = parser.parse_args()
 
     df = generate(args.n_rows, args.seed, args.start_date, args.n_days)
