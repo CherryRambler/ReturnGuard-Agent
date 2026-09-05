@@ -7,6 +7,10 @@ executes a bounded action (allow / restrict COD / flag for review) within
 a per-hour cap - not just a score someone still has to act on. Every
 decision, and every human override, is written to a permanent audit log.
 
+**Live demo:** https://returnguard-agent-j5svwedftceap23mh5tb6d.streamlit.app
+(backend: https://returnguard-backend-1nop.onrender.com - free-tier, may
+take ~30-60s to wake up after idling; see "Deploying live" below)
+
 ## Two datasets, one pipeline
 
 ReturnGuard runs on either of two datasets, selected by a `--dataset
