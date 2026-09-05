@@ -1,6 +1,6 @@
 # ReturnGuard Agent
 
-Razorpay AI Buildathon 2026 - Track 2 (AI Risk Manager)
+Razorpay AI Buildathon 2026 - Track 2 (AI Risk Manager).
 
 Scores every order at checkout for return probability, then decides and
 executes a bounded action (allow / restrict COD / flag for review) within
