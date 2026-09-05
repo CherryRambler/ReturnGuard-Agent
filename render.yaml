@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: returnguard-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: RETURNGUARD_DATASET
+        value: synthetic
+      # Free plan has no persistent disk, so this lives in the
+      # container's ephemeral filesystem: resets on every deploy and on
+      # idle spin-down (free web services sleep after 15 min inactivity).
+      # Fine for a demo. To persist across restarts, upgrade to a paid
+      # plan, attach a disk, and point this at a path under its mount
+      # (e.g. /data/returnguard.db).
+      - key: RETURNGUARD_DB_PATH
+        value: returnguard.db
+      # Set this to your deployed Streamlit app's origin (comma-separate
+      # for more than one), e.g. https://returnguard-agent.streamlit.app
+      - key: RETURNGUARD_ALLOWED_ORIGINS
+        value: "*"

@@ -61,6 +61,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 
 # Logs
 *.log
