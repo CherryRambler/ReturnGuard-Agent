@@ -244,6 +244,30 @@ adapter maps and why is documented at the top of
 `scripts/prepare_real_data.py`; **its metrics are not comparable to the
 synthetic ones** (see "Real numbers are NOT comparable" above).
 
+## Deploying live
+
+Two services, deployed independently:
+
+**Backend (FastAPI) -> Render.** The repo includes a `Dockerfile` and
+`render.yaml` blueprint. In the Render dashboard: New -> Blueprint,
+point it at this repo, and it picks up `render.yaml` (free plan, serves
+the synthetic model, health check on `/health`). Note the free plan has
+no persistent disk, so `returnguard.db` resets on redeploy/idle
+spin-down - fine for a demo; upgrade to a paid plan and add a disk (see
+comments in `render.yaml`) for a durable audit log. Once deployed, note
+the service URL (e.g. `https://returnguard-backend.onrender.com`).
+
+**Frontend (Streamlit) -> Streamlit Community Cloud.** New app -> point
+it at this repo, main file path `frontend/app.py`. In the app's Secrets
+settings, add (see `.streamlit/secrets.toml.example`):
+
+    RETURNGUARD_API_URL = "https://returnguard-backend.onrender.com"
+
+**Lock down CORS (recommended once you have the Streamlit URL):** set
+`RETURNGUARD_ALLOWED_ORIGINS` on the Render service to your Streamlit
+app's exact origin (comma-separate for more than one) instead of the
+default `*`, then redeploy the backend.
+
 ## Tests
 
     pytest -v

@@ -27,6 +27,7 @@ from typing import Optional
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from backend import db
@@ -44,6 +45,23 @@ if DATASET not in ("synthetic", "real"):
 MODEL_PATH = f"models/xgboost_model_{DATASET}.joblib"
 
 app = FastAPI(title="ReturnGuard Agent")
+
+# The dashboard is served from a different origin in production (Streamlit
+# Community Cloud vs. this API on Render), so the browser needs CORS
+# headers to call it. Restrict to the configured frontend origin(s); allow
+# "*" only as a local-dev fallback when nothing is set.
+_allowed_origins = [
+    o.strip()
+    for o in os.environ.get("RETURNGUARD_ALLOWED_ORIGINS", "*").split(",")
+    if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_allowed_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 model = ReturnRiskModel.load(MODEL_PATH)
 policy = DecisionPolicy(allow_threshold=model.allow_threshold, restrict_threshold=model.restrict_threshold)
