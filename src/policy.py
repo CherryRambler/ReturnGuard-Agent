@@ -6,7 +6,7 @@ context to ONE of three bounded actions. This is the module that turns
 a risk *scorer* into a risk *agent*: every action is capped, reversible,
 and meant to be logged by the caller (see backend/db.py's audit_log table).
 
-See: razorpay_buildathon_plan.md, Section 6 (Technical Architecture,
+See: docs/buildathon_plan.md, Section 6 (Technical Architecture,
 "Decision & Action Layer") and Section 7 ("audit_log" table).
 
 Design principles:

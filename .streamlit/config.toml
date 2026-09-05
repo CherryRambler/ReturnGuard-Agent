@@ -1,0 +1,13 @@
+# ReturnGuard Agent - dark control-room theme.
+# Kept here (not inline) so `streamlit run frontend/app.py` picks it up
+# automatically from the repo root.
+[theme]
+base = "dark"
+primaryColor = "#4c8dff"
+backgroundColor = "#0d1117"
+secondaryBackgroundColor = "#161b22"
+textColor = "#e6edf3"
+font = "sans serif"
+
+[server]
+headless = true

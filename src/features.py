@@ -5,7 +5,7 @@ Builds an sklearn ColumnTransformer that turns raw order columns into
 the numeric matrix XGBoost needs. Fit ONLY on train.csv - val/test and
 live inference calls only ever use .transform() on an already-fitted
 pipeline, never .fit() or .fit_transform() again. That's what keeps the
-held-out test set honest (see razorpay_buildathon_plan.md, Section 7,
+held-out test set honest (see docs/buildathon_plan.md, Section 7,
 "Leakage prevention").
 """
 

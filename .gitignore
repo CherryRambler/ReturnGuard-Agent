@@ -66,4 +66,4 @@ Thumbs.db
 *.log
 
 # Private planning docs
-razorpay_buildathon_plan.md
+docs/buildathon_plan.md

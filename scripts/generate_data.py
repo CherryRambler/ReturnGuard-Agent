@@ -8,7 +8,7 @@ precision/recall look fake). Produces a temporal train/val/test split
 (70/15/15) so the held-out test set behaves like "future" orders and
 there is no leakage from random shuffling across time.
 
-See: razorpay_buildathon_plan.md, Section 7 (Dataset Design) for the
+See: docs/buildathon_plan.md, Section 7 (Dataset Design) for the
 full column spec and design rationale.
 
 Usage:

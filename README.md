@@ -77,7 +77,7 @@ These are the **synthetic** numbers (the default dataset).
 
 Full report: evaluation/eval_report_synthetic.md (and eval_report_real.md
 for the Olist path)
-Full 13-day plan and design rationale: razorpay_buildathon_plan.md
+Full 13-day plan and design rationale: docs/buildathon_plan.md
 
 ## A note on this being a revised model (read this - it matters)
 
@@ -148,8 +148,12 @@ automatically an operationally sane one.
   (`--dataset real`, the Olist dataset) - see "Two datasets, one
   pipeline" above for why its numbers are a different problem, not a
   regression.
-- The "recent scored orders" queue in the dashboard lives in the browser
-  session only; the permanent record is the audit_log table.
+- The dashboard's "Recent Agent Decisions" and every queue read live from
+  the backend API (`/decisions`, `/review-queue`, `/audit-log`), not
+  browser session state - the permanent record is the `audit_log` table.
+  "Append-only" means the app only ever INSERTs into it (an override is a
+  new row linked to the action it supersedes); it is a SQLite table, not
+  cryptographically immutable.
 - The model was revised once after the initial evaluation (see above) -
   test.csv was consulted a second time as a result, which is a
   documented, deliberate exception to the single-look protocol used
@@ -168,16 +172,46 @@ automatically an operationally sane one.
     python -m evaluation.evaluate --dataset synthetic    # -> evaluation/eval_report_synthetic.md
     python -m evaluation.error_analysis --dataset synthetic
 
-Then, two terminals:
+### Run the frontend (Streamlit dashboard)
 
-    RETURNGUARD_DATASET=synthetic uvicorn backend.main:app --reload   # terminal 1: the API
-    streamlit run frontend/app.py                                     # terminal 2: the dashboard
+The frontend talks only to the backend API, so start the backend first.
+Use **two terminals**, both from the repo root with the venv active:
 
-(`--dataset` defaults to `synthetic` and `RETURNGUARD_DATASET` defaults
-to `synthetic`, so the bare commands from earlier versions still work.)
+Terminal 1 - the API (must be up before the dashboard can score anything):
 
-Dashboard: http://localhost:8501
-API docs:  http://127.0.0.1:8000/docs
+    # macOS / Linux
+    RETURNGUARD_DATASET=synthetic uvicorn backend.main:app --reload
+
+    # Windows PowerShell
+    $env:RETURNGUARD_DATASET="synthetic"; uvicorn backend.main:app --reload
+
+Terminal 2 - the dashboard:
+
+    streamlit run frontend/app.py
+
+Then open the dashboard at http://localhost:8501 (Streamlit also prints
+the URL). The sidebar shows the agent status, a green "connected ·
+synthetic" pill once it reaches the API, and the current hourly action
+usage; if terminal 1 isn't running yet you get a compact "Backend
+unavailable" bar with a Retry button instead of a wall-of-text error.
+
+The dashboard is an **agent operations console**, not a scoring
+calculator. It has six views (sidebar): **Dashboard** (run a decision +
+see the full pipeline: return probability → risk level → agent decision →
+hourly-cap check → action execution → audit log), **Decision Queue** (all
+automated decisions, with a per-order pipeline timeline), **Review Queue**
+(orders the agent flagged for a human, with approve / override actions),
+**Audit Log** (the append-only `audit_log` table with filters),
+**Metrics** (agent-operational counts, kept separate from model
+performance), and **Settings** (read-only policy + cap config). Dark
+theme lives in `.streamlit/config.toml`.
+
+- `--dataset` and `RETURNGUARD_DATASET` both default to `synthetic`, so
+  the bare `uvicorn backend.main:app --reload` also works.
+- If the API runs on a non-default host/port, point the frontend at it
+  with `RETURNGUARD_API_URL` (default `http://127.0.0.1:8000`).
+
+API docs (Swagger UI): http://127.0.0.1:8000/docs
 
 ## Real (Olist) data path
 
@@ -225,7 +259,8 @@ models trained: 25 passing, 2 skipped.
 
     returnguard-agent/
     |-- backend/
-    |   |-- main.py         FastAPI: /score, /override, /metrics
+    |   |-- main.py         FastAPI: /score, /override, /metrics, /cap,
+    |   |                    /decisions, /review-queue, /audit-log
     |   `-- db.py            SQLite: scored_orders + audit_log
     |-- frontend/
     |   `-- app.py            Streamlit dashboard
@@ -248,6 +283,10 @@ models trained: 25 passing, 2 skipped.
     |   |-- model.py            XGBoost wrapper + calibration
     |   |-- explain.py          SHAP explanations
     |   `-- policy.py            score -> bounded action
-    |-- tests/                 23 automated tests
-    |-- requirements.txt
-    `-- razorpay_buildathon_plan.md
+    |-- tests/                 automated tests (both dataset paths)
+    |-- docs/
+    |   `-- buildathon_plan.md  13-day plan + design rationale
+    `-- requirements.txt
+
+Runtime artifacts (gitignored, created on first run): `returnguard.db`
+(SQLite audit log; override its location with `RETURNGUARD_DB_PATH`).

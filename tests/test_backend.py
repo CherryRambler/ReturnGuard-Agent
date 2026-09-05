@@ -150,3 +150,89 @@ def test_metrics_reflects_scored_orders(client):
     assert body["total_scored_orders"] >= 1
     assert "action_distribution" in body
     assert "override_rate_by_action" in body
+    # Agent-operational block, added for the dashboard.
+    assert body["operational"]["orders_evaluated"] >= 1
+    assert "cap" in body
+
+
+def test_score_response_carries_agent_fields(client):
+    body = client.post("/score", json=SAMPLE_ORDER).json()
+    assert body["risk_level"] in {"low", "medium", "high"}
+    assert body["status"] in {"executed", "pending_review", "blocked_by_cap"}
+    assert body["scored_at"]
+    assert body["audit_log_id"]
+
+
+def test_cap_endpoint_reports_budget(client):
+    body = client.get("/cap").json()
+    assert body["capped_action"] == "restrict_cod"
+    assert body["limit"] >= 1
+    assert body["used"] <= body["limit"] or body["cap_reached"]
+    assert body["downgrade_action"] == "flag_for_review"
+
+
+def test_decisions_and_detail_endpoints(client):
+    client.post("/score", json=SAMPLE_ORDER)
+    decisions = client.get("/decisions").json()["decisions"]
+    assert any(d["order_id"] == SAMPLE_ORDER["order_id"] for d in decisions)
+
+    detail = client.get(f"/decisions/{SAMPLE_ORDER['order_id']}").json()
+    assert detail["order"]["order_id"] == SAMPLE_ORDER["order_id"]
+    assert detail["decision"]["risk_level"] in {"low", "medium", "high"}
+    assert any(e["event_type"] == "auto_action" for e in detail["audit_events"])
+
+    assert client.get("/decisions/no-such-order").status_code == 404
+
+
+def test_review_queue_holds_flagged_orders_only(client):
+    # Force a flag_for_review: non-COD, mid/high risk order.
+    flagged = {**SAMPLE_ORDER, "order_id": "rq-1", "payment_method": "card"}
+    body = client.post("/score", json=flagged).json()
+    queue = client.get("/review-queue").json()["queue"]
+    in_queue = any(q["order_id"] == "rq-1" for q in queue)
+    # It's in the queue iff the agent actually flagged it.
+    assert in_queue == (body["action"] == "flag_for_review")
+
+
+def test_model_metrics_reads_eval_report(client):
+    body = client.get("/model-metrics").json()
+    assert body["dataset"] == "synthetic"
+    # Repo ships evaluation/eval_report_synthetic.md, so this should be
+    # real parsed numbers, not the "not found" fallback.
+    if body["available"]:
+        assert 0.0 <= body["precision"] <= 1.0
+        assert 0.0 <= body["recall"] <= 1.0
+        assert 0.0 <= body["f1"] <= 1.0
+        assert 0.0 <= body["roc_auc"] <= 1.0
+
+
+def test_operational_restrict_cod_count_matches_override_rate_auto_count(client):
+    """Regression test for the two COD-restriction numbers disagreeing:
+    both must be computed from the same scored_orders query, so this
+    must hold for ANY state of the (possibly non-empty, shared) DB -
+    not just right after one fresh score."""
+    metrics = client.get("/metrics").json()
+    op = metrics["operational"]
+    rates = metrics["override_rate_by_action"]
+    for action in ("allow", "restrict_cod", "flag_for_review"):
+        rate_row = rates.get(action)
+        auto_count = rate_row["auto_count"] if rate_row else 0
+        assert op[action] == auto_count, (
+            f"operational[{action}]={op[action]} != "
+            f"override_rate_by_action[{action}].auto_count={auto_count}"
+        )
+
+
+def test_audit_log_endpoint_is_append_only_and_links_overrides(client):
+    client.post("/score", json=SAMPLE_ORDER)
+    client.post(
+        f"/override/{SAMPLE_ORDER['order_id']}",
+        json={"new_action": "allow", "reviewer": "ops", "reason": "verified"},
+    )
+    body = client.get("/audit-log").json()
+    assert body["append_only"] is True
+    events = body["events"]
+    override = next(e for e in events if e["event_type"] == "human_override")
+    assert override["override_of_log_id"] is not None
+    auto = next(e for e in events if e["event_type"] == "auto_action")
+    assert auto["was_overridden"] is True

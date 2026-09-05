@@ -1,7 +1,7 @@
 """
 ReturnGuard Agent - agent trust evaluation (human-override rate).
 
-TODO (Day 11, per razorpay_buildathon_plan.md Section 8):
+TODO (Day 11, per docs/buildathon_plan.md Section 8):
   1. Run the full held-out test set through src/policy.py's DecisionPolicy
      so every order gets an "auto_action" row (write these to audit_log
      via backend/db.py, or a standalone sqlite file for this script).
