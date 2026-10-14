@@ -194,21 +194,29 @@ Terminal 2 - the dashboard:
     streamlit run frontend/app.py
 
 Then open the dashboard at http://localhost:8501 (Streamlit also prints
-the URL). The sidebar shows the agent status, a green "connected ·
-synthetic" pill once it reaches the API, and the current hourly action
-usage; if terminal 1 isn't running yet you get a compact "Backend
-unavailable" bar with a Retry button instead of a wall-of-text error.
+the URL). The sidebar shows whether the agent is active, which model it
+is serving and the current hourly action usage. If terminal 1 isn't
+running yet you get a compact "Backend unavailable" bar with a Retry
+button instead of a wall-of-text error.
 
 The dashboard is an **agent operations console**, not a scoring
-calculator. It has six views (sidebar): **Dashboard** (run a decision +
-see the full pipeline: return probability → risk level → agent decision →
-hourly-cap check → action execution → audit log), **Decision Queue** (all
-automated decisions, with a per-order pipeline timeline), **Review Queue**
-(orders the agent flagged for a human, with approve / override actions),
-**Audit Log** (the append-only `audit_log` table with filters),
-**Metrics** (agent-operational counts, kept separate from model
-performance), and **Settings** (read-only policy + cap config). Dark
-theme lives in `.streamlit/config.toml`.
+calculator. Each view is its own page with its own URL:
+
+| Page | URL | What it's for |
+|---|---|---|
+| **Overview** | `/` | Headline counts, decisions per hour, the hourly action budget, the latest decisions |
+| **Score an Order** | `/score` | Run one order through the pipeline: return probability → risk level → agent decision → hourly-cap check → action execution → audit log |
+| **Decisions** | `/decisions` | All automated decisions, filterable, with a per-order pipeline timeline |
+| **Review Queue** | `/review` | Orders the agent flagged for a human, with approve / override actions |
+| **Audit Log** | `/audit` | The append-only `audit_log` table with filters |
+| **Analytics** | `/analytics` | Agent-operational counts, kept separate from model performance |
+| **Settings** | `/settings` | Read-only policy + cap config |
+
+The look is a "private bank" theme: ink sidebar, teal accent with brass
+details, serif headings and figures. Colours and fonts live in
+`.streamlit/config.toml`; the few extra styles the theme options can't
+express are in `THEME_CSS` in `frontend/common.py`. Needs Streamlit
+1.65 or newer.
 
 - `--dataset` and `RETURNGUARD_DATASET` both default to `synthetic`, so
   the bare `uvicorn backend.main:app --reload` also works.
@@ -291,7 +299,10 @@ models trained: 25 passing, 2 skipped.
     |   |                    /decisions, /review-queue, /audit-log
     |   `-- db.py            SQLite: scored_orders + audit_log
     |-- frontend/
-    |   `-- app.py            Streamlit dashboard
+    |   |-- app.py            Streamlit entry point: theme + page navigation
+    |   |-- common.py         API client, helpers, shared components, theme CSS
+    |   `-- views/            one file per page (overview, score, decisions,
+    |                         review, audit, analytics, settings)
     |-- data/
     |   |-- synthetic/        train/val/test.csv (synthetic, temporal split)
     |   |-- real/             train/val/test.csv (Olist adapter output)
