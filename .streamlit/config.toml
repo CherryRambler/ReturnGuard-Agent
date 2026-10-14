@@ -1,13 +1,38 @@
-# ReturnGuard Agent - dark control-room theme.
-# Kept here (not inline) so `streamlit run frontend/app.py` picks it up
-# automatically from the repo root.
+# ReturnGuard Agent - "Private Bank" theme.
+# Institutional and calm: ink sidebar, cool off-white canvas, deep teal
+# accent with brass details, serif headings and figures over a plain
+# sans body. Kept here (not inline) so `streamlit run frontend/app.py`
+# picks it up automatically from the repo root. Extra polish that the
+# theme options can't express lives in frontend/common.py (THEME_CSS).
 [theme]
-base = "dark"
-primaryColor = "#4c8dff"
-backgroundColor = "#0d1117"
-secondaryBackgroundColor = "#161b22"
-textColor = "#e6edf3"
-font = "sans serif"
+base = "light"
+primaryColor = "#0e5e6f"
+backgroundColor = "#f4f6f8"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#121a24"
+linkColor = "#0e5e6f"
+borderColor = "#d8dde4"
+showWidgetBorder = true
+baseRadius = "4px"
+buttonRadius = "4px"
+font = "Public Sans:https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&display=swap"
+headingFont = "Source Serif 4:https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap"
+headingFontWeights = 600
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap"
+dataframeHeaderBackgroundColor = "#eef1f4"
+greenColor = "#2b7a4b"
+redColor = "#a8323a"
+orangeColor = "#9a6b12"
+blueColor = "#0e5e6f"
+chartCategoricalColors = ["#0e5e6f", "#b08a3e", "#a8323a", "#2b7a4b", "#5d6774"]
+
+[theme.sidebar]
+backgroundColor = "#121a24"
+secondaryBackgroundColor = "#1f2a38"
+textColor = "#f1f3f6"
+borderColor = "#2a3646"
+primaryColor = "#b08a3e"
+linkColor = "#d9b56a"
 
 [server]
 headless = true
